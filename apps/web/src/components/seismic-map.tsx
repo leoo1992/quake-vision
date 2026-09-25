@@ -58,7 +58,7 @@ export function SeismicMap({
     void import('maplibre-gl').then((module) => {
       if (disposed || !containerRef.current) return;
 
-      const maplibregl = module.default;
+      const maplibregl = module;
       const map = new maplibregl.Map({
         container: containerRef.current,
         style: 'https://tiles.openfreemap.org/styles/dark',
@@ -204,11 +204,19 @@ export function SeismicMap({
           },
         });
 
-        map.on('click', 'quake-points', (event) => {
+        map.on(
+          'click',
+          'quake-points',
+          (
+            event: import('maplibre-gl').MapMouseEvent & {
+              features?: import('maplibre-gl').MapGeoJSONFeature[];
+            },
+          ) => {
           const feature = event.features?.[0];
           const id = feature?.properties?.id as string | undefined;
-          if (id) onSelectRef.current(id);
-        });
+            if (id) onSelectRef.current(id);
+          },
+        );
 
         map.on('mouseenter', 'quake-points', () => {
           map.getCanvas().style.cursor = 'pointer';
