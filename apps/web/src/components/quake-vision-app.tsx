@@ -179,7 +179,7 @@ export function QuakeVisionApp() {
     };
   }, [range, minMagnitude, maxDepth, t]);
 
-  const events = dataset?.events ?? [];
+  const events = useMemo(() => dataset?.events ?? [], [dataset]);
   const filteredEvents = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     if (!normalizedSearch) return events;
