@@ -14,6 +14,12 @@ import {
 import type { ReactNode } from 'react';
 import type { MapMode, TimeRange } from '@/lib/earthquakes';
 
+export interface TimeBucketFilter {
+  start: number;
+  end: number;
+  label: string;
+}
+
 interface QuakeUiState {
   range: TimeRange;
   minMagnitude: number;
@@ -21,6 +27,8 @@ interface QuakeUiState {
   mapMode: MapMode;
   selectedId: string | null;
   search: string;
+  magnitudeBucket: string | null;
+  timeBucket: TimeBucketFilter | null;
 }
 
 const initialState: QuakeUiState = {
@@ -30,6 +38,8 @@ const initialState: QuakeUiState = {
   mapMode: 'points',
   selectedId: null,
   search: '',
+  magnitudeBucket: null,
+  timeBucket: null,
 };
 
 const quakeSlice = createSlice({
@@ -39,6 +49,7 @@ const quakeSlice = createSlice({
     setRange(state, action: PayloadAction<TimeRange>) {
       state.range = action.payload;
       state.selectedId = null;
+      state.timeBucket = null;
     },
     setMinMagnitude(state, action: PayloadAction<number>) {
       state.minMagnitude = action.payload;
@@ -57,6 +68,24 @@ const quakeSlice = createSlice({
     setSearch(state, action: PayloadAction<string>) {
       state.search = action.payload;
     },
+    toggleMagnitudeBucket(state, action: PayloadAction<string>) {
+      state.magnitudeBucket =
+        state.magnitudeBucket === action.payload ? null : action.payload;
+      state.selectedId = null;
+    },
+    toggleTimeBucket(state, action: PayloadAction<TimeBucketFilter>) {
+      state.timeBucket =
+        state.timeBucket?.start === action.payload.start &&
+        state.timeBucket?.end === action.payload.end
+          ? null
+          : action.payload;
+      state.selectedId = null;
+    },
+    clearChartFilters(state) {
+      state.magnitudeBucket = null;
+      state.timeBucket = null;
+      state.selectedId = null;
+    },
   },
 });
 
@@ -67,6 +96,9 @@ export const {
   setMinMagnitude,
   setRange,
   setSearch,
+  toggleMagnitudeBucket,
+  toggleTimeBucket,
+  clearChartFilters,
 } = quakeSlice.actions;
 
 export const store = configureStore({

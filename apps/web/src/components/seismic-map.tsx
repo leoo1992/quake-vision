@@ -101,6 +101,18 @@ export function SeismicMap({
   }, [onSelect]);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(() => {
+      mapRef.current?.resize();
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     let disposed = false;
