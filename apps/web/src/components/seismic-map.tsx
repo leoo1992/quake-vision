@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ThemePreference } from '@/components/experience-provider';
 import type {
   EarthquakeEvent,
@@ -40,15 +40,15 @@ function toFeatureCollection(events: EarthquakeEvent[]) {
 function rasterPaint(theme: ThemePreference) {
   return theme === 'dark'
     ? {
-        'raster-saturation': -0.92,
-        'raster-contrast': 0.25,
-        'raster-brightness-min': 0.04,
-        'raster-brightness-max': 0.42,
+        'raster-saturation': -1,
+        'raster-contrast': 0.42,
+        'raster-brightness-min': 0.02,
+        'raster-brightness-max': 0.28,
       }
     : {
-        'raster-saturation': -0.12,
-        'raster-contrast': 0.03,
-        'raster-brightness-min': 0.12,
+        'raster-saturation': -0.04,
+        'raster-contrast': 0,
+        'raster-brightness-min': 0.08,
         'raster-brightness-max': 1,
       };
 }
@@ -70,7 +70,7 @@ function baseStyle(theme: ThemePreference): import('maplibre-gl').StyleSpecifica
         id: 'map-background',
         type: 'background',
         paint: {
-          'background-color': theme === 'dark' ? '#0a0d11' : '#e8ece8',
+          'background-color': theme === 'dark' ? '#07090d' : '#eef1ed',
         },
       },
       {
@@ -93,21 +93,12 @@ export function SeismicMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('maplibre-gl').Map | null>(null);
   const onSelectRef = useRef(onSelect);
-  const eventsRef = useRef(events);
-  const modeRef = useRef(mode);
   const initialThemeRef = useRef(theme);
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
-
-  useEffect(() => {
-    eventsRef.current = events;
-  }, [events]);
-
-  useEffect(() => {
-    modeRef.current = mode;
-  }, [mode]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -143,9 +134,14 @@ export function SeismicMap({
       );
 
       map.on('load', () => {
+        if (disposed) return;
+
         map.addSource('quakes', {
           type: 'geojson',
-          data: toFeatureCollection(eventsRef.current),
+          data: {
+            type: 'FeatureCollection',
+            features: [],
+          },
           promoteId: 'id',
         });
 
@@ -169,23 +165,23 @@ export function SeismicMap({
               ['linear'],
               ['zoom'],
               0,
-              0.65,
+              0.7,
               7,
-              1.75,
+              1.9,
             ],
             'heatmap-radius': [
               'interpolate',
               ['linear'],
               ['zoom'],
               0,
-              8,
+              10,
               7,
-              38,
+              42,
             ],
-            'heatmap-opacity': 0.82,
+            'heatmap-opacity': 0.88,
           },
           layout: {
-            visibility: modeRef.current === 'heat' ? 'visible' : 'none',
+            visibility: 'none',
           },
         });
 
@@ -199,18 +195,18 @@ export function SeismicMap({
               ['linear'],
               ['get', 'magnitude'],
               1,
-              5,
-              4,
-              11,
               7,
-              24,
+              4,
+              14,
+              7,
+              29,
             ],
             'circle-color': ['get', 'color'],
-            'circle-opacity': 0.14,
+            'circle-opacity': 0.22,
             'circle-blur': 0.75,
           },
           layout: {
-            visibility: modeRef.current === 'points' ? 'visible' : 'none',
+            visibility: 'visible',
           },
         });
 
@@ -224,20 +220,24 @@ export function SeismicMap({
               ['linear'],
               ['get', 'magnitude'],
               1,
-              3,
               4,
-              5.5,
+              3,
+              5,
+              4,
               7,
-              10,
+              5,
+              9,
+              7,
+              13,
             ],
             'circle-color': ['get', 'color'],
-            'circle-opacity': 0.92,
+            'circle-opacity': 0.98,
             'circle-stroke-color': '#ffffff',
-            'circle-stroke-width': 0.65,
-            'circle-stroke-opacity': 0.5,
+            'circle-stroke-width': 1,
+            'circle-stroke-opacity': 0.82,
           },
           layout: {
-            visibility: modeRef.current === 'points' ? 'visible' : 'none',
+            visibility: 'visible',
           },
         });
 
@@ -251,9 +251,9 @@ export function SeismicMap({
               ['linear'],
               ['get', 'magnitude'],
               1,
-              10,
+              11,
               7,
-              20,
+              22,
             ],
             'circle-opacity': 0,
           },
@@ -272,11 +272,11 @@ export function SeismicMap({
           type: 'circle',
           source: 'selected-quake',
           paint: {
-            'circle-radius': 17,
+            'circle-radius': 19,
             'circle-color': 'rgba(0,0,0,0)',
             'circle-stroke-color': '#b8ed3f',
-            'circle-stroke-width': 2.5,
-            'circle-stroke-opacity': 0.95,
+            'circle-stroke-width': 3,
+            'circle-stroke-opacity': 1,
           },
         });
 
@@ -301,11 +301,16 @@ export function SeismicMap({
         map.on('mouseleave', 'quake-hit', () => {
           map.getCanvas().style.cursor = '';
         });
+
+        setMapReady(true);
       });
 
       map.on('error', (event) => {
         if (event.error) {
-          console.warn('QuakeVision map resource error:', event.error.message);
+          console.warn(
+            'QuakeVision map resource error:',
+            event.error.message,
+          );
         }
       });
 
@@ -314,16 +319,20 @@ export function SeismicMap({
 
     return () => {
       disposed = true;
+      setMapReady(false);
       mapRef.current?.remove();
       mapRef.current = null;
     };
   }, []);
 
   useEffect(() => {
+    if (!mapReady) return;
+
     const map = mapRef.current;
-    if (!map?.isStyleLoaded() || !map.getLayer('osm-basemap')) return;
+    if (!map || !map.getLayer('osm-basemap')) return;
 
     const paint = rasterPaint(theme);
+
     map.setPaintProperty(
       'osm-basemap',
       'raster-saturation',
@@ -345,47 +354,60 @@ export function SeismicMap({
       paint['raster-brightness-max'],
     );
 
-    if (map.getLayer('map-background')) {
-      map.setPaintProperty(
-        'map-background',
-        'background-color',
-        theme === 'dark' ? '#0a0d11' : '#e8ece8',
-      );
-    }
-  }, [theme]);
+    map.setPaintProperty(
+      'map-background',
+      'background-color',
+      theme === 'dark' ? '#07090d' : '#eef1ed',
+    );
+
+    map.triggerRepaint();
+  }, [mapReady, theme]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!mapReady) return;
 
-    const source = map.getSource(
+    const map = mapRef.current;
+    const source = map?.getSource(
       'quakes',
     ) as import('maplibre-gl').GeoJSONSource | undefined;
 
     source?.setData(toFeatureCollection(events));
-  }, [events]);
+    map?.triggerRepaint();
+  }, [events, mapReady]);
 
   useEffect(() => {
-    const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!mapReady) return;
 
-    const visibility = mode === 'points' ? 'visible' : 'none';
+    const map = mapRef.current;
+    if (!map) return;
+
+    const pointVisibility = mode === 'points' ? 'visible' : 'none';
     const heatVisibility = mode === 'heat' ? 'visible' : 'none';
 
-    if (map.getLayer('quake-points')) {
-      map.setLayoutProperty('quake-points', 'visibility', visibility);
-    }
-    if (map.getLayer('quake-glow')) {
-      map.setLayoutProperty('quake-glow', 'visibility', visibility);
-    }
-    if (map.getLayer('quake-heat')) {
-      map.setLayoutProperty('quake-heat', 'visibility', heatVisibility);
-    }
-  }, [mode]);
+    map.setLayoutProperty(
+      'quake-points',
+      'visibility',
+      pointVisibility,
+    );
+    map.setLayoutProperty(
+      'quake-glow',
+      'visibility',
+      pointVisibility,
+    );
+    map.setLayoutProperty(
+      'quake-heat',
+      'visibility',
+      heatVisibility,
+    );
+
+    map.triggerRepaint();
+  }, [mapReady, mode]);
 
   useEffect(() => {
+    if (!mapReady) return;
+
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
+    if (!map) return;
 
     const selected = events.find((event) => event.id === selectedId);
     const source = map.getSource(
@@ -399,6 +421,7 @@ export function SeismicMap({
         type: 'FeatureCollection',
         features: [],
       });
+      map.triggerRepaint();
       return;
     }
 
@@ -421,7 +444,14 @@ export function SeismicMap({
       zoom: Math.max(map.getZoom(), 4.2),
       duration: 900,
     });
-  }, [events, selectedId]);
+  }, [events, mapReady, selectedId]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div
+      ref={containerRef}
+      className="h-full w-full"
+      data-map-ready={mapReady}
+      aria-label="Interactive earthquake map"
+    />
+  );
 }
