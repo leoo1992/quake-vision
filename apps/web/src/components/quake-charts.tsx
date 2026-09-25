@@ -6,6 +6,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -19,48 +21,76 @@ import {
   type TimeRange,
 } from '@/lib/earthquakes';
 
+interface ActivitySelection {
+  start: number;
+  end: number;
+  label: string;
+}
+
 export function ActivityChart({
   events,
   range,
+  activeLabel,
+  onSelect,
 }: {
   events: EarthquakeEvent[];
   range: TimeRange;
+  activeLabel?: string | null;
+  onSelect?: (selection: ActivitySelection) => void;
 }) {
   const { localeTag, theme, t } = useExperience();
   const data = activitySeries(events, range, localeTag);
-  const axis = theme === 'dark' ? '#747b89' : '#626b78';
-  const grid = theme === 'dark'
-    ? 'rgba(255,255,255,.06)'
-    : 'rgba(22,30,42,.10)';
+  const axis = theme === 'dark' ? '#8e97a5' : '#56606c';
+  const grid =
+    theme === 'dark' ? 'rgba(255,255,255,.075)' : 'rgba(22,30,42,.11)';
   const tooltipBackground = theme === 'dark' ? '#10141c' : '#ffffff';
-  const tooltipBorder = theme === 'dark'
-    ? '1px solid rgba(255,255,255,.12)'
-    : '1px solid rgba(22,30,42,.14)';
-  const tooltipText = theme === 'dark' ? '#aeb5c1' : '#303844';
+  const tooltipBorder =
+    theme === 'dark'
+      ? '1px solid rgba(255,255,255,.14)'
+      : '1px solid rgba(22,30,42,.15)';
+  const tooltipText = theme === 'dark' ? '#c7cdd6' : '#303844';
+  const bucketMs =
+    range === 'day'
+      ? 60 * 60 * 1000
+      : range === 'week'
+        ? 6 * 60 * 60 * 1000
+        : 24 * 60 * 60 * 1000;
 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <AreaChart
         data={data}
-        margin={{ top: 10, right: 4, bottom: 0, left: -28 }}
+        margin={{ top: 14, right: 8, bottom: 2, left: -18 }}
+        style={{ cursor: onSelect ? 'pointer' : 'default' }}
+        onClick={(state) => {
+          const payload = state?.activePayload?.[0]?.payload as
+            | { time: number; label: string }
+            | undefined;
+          if (!payload || !onSelect) return;
+          onSelect({
+            start: payload.time,
+            end: payload.time + bucketMs,
+            label: payload.label,
+          });
+        }}
       >
         <defs>
           <linearGradient id="activityFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a9db22" stopOpacity={0.35} />
+            <stop offset="0%" stopColor="#a9db22" stopOpacity={0.4} />
             <stop offset="100%" stopColor="#a9db22" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke={grid} vertical={false} />
         <XAxis
           dataKey="label"
-          tick={{ fill: axis, fontSize: 10 }}
+          tick={{ fill: axis, fontSize: 12 }}
           axisLine={false}
           tickLine={false}
-          minTickGap={28}
+          minTickGap={34}
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fill: axis, fontSize: 10 }}
+          tick={{ fill: axis, fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
@@ -69,18 +99,27 @@ export function ActivityChart({
             background: tooltipBackground,
             border: tooltipBorder,
             borderRadius: 10,
-            fontSize: 11,
+            fontSize: 13,
             color: tooltipText,
           }}
           labelStyle={{ color: tooltipText }}
         />
+        {activeLabel ? (
+          <ReferenceLine
+            x={activeLabel}
+            stroke="#ff715b"
+            strokeWidth={2}
+            strokeDasharray="4 4"
+          />
+        ) : null}
         <Area
           type="monotone"
           dataKey="count"
           stroke="#b8ed3f"
-          strokeWidth={2}
+          strokeWidth={2.4}
           fill="url(#activityFill)"
           name={t('eventsChart')}
+          activeDot={{ r: 6, strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>
@@ -89,36 +128,47 @@ export function ActivityChart({
 
 export function MagnitudeChart({
   events,
+  activeBucket,
+  onSelect,
 }: {
   events: EarthquakeEvent[];
+  activeBucket?: string | null;
+  onSelect?: (label: string) => void;
 }) {
   const { theme, t } = useExperience();
   const data = magnitudeBuckets(events);
-  const axis = theme === 'dark' ? '#747b89' : '#626b78';
-  const grid = theme === 'dark'
-    ? 'rgba(255,255,255,.06)'
-    : 'rgba(22,30,42,.10)';
+  const axis = theme === 'dark' ? '#8e97a5' : '#56606c';
+  const grid =
+    theme === 'dark' ? 'rgba(255,255,255,.075)' : 'rgba(22,30,42,.11)';
   const tooltipBackground = theme === 'dark' ? '#10141c' : '#ffffff';
-  const tooltipBorder = theme === 'dark'
-    ? '1px solid rgba(255,255,255,.12)'
-    : '1px solid rgba(22,30,42,.14)';
+  const tooltipBorder =
+    theme === 'dark'
+      ? '1px solid rgba(255,255,255,.14)'
+      : '1px solid rgba(22,30,42,.15)';
 
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart
         data={data}
-        margin={{ top: 8, right: 4, bottom: 0, left: -28 }}
+        margin={{ top: 12, right: 8, bottom: 2, left: -18 }}
+        style={{ cursor: onSelect ? 'pointer' : 'default' }}
+        onClick={(state) => {
+          const payload = state?.activePayload?.[0]?.payload as
+            | { label: string }
+            | undefined;
+          if (payload?.label && onSelect) onSelect(payload.label);
+        }}
       >
         <CartesianGrid stroke={grid} vertical={false} />
         <XAxis
           dataKey="label"
-          tick={{ fill: axis, fontSize: 10 }}
+          tick={{ fill: axis, fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
         <YAxis
           allowDecimals={false}
-          tick={{ fill: axis, fontSize: 10 }}
+          tick={{ fill: axis, fontSize: 12 }}
           axisLine={false}
           tickLine={false}
         />
@@ -126,22 +176,29 @@ export function MagnitudeChart({
           cursor={{
             fill:
               theme === 'dark'
-                ? 'rgba(255,255,255,.03)'
-                : 'rgba(20,28,40,.04)',
+                ? 'rgba(255,255,255,.04)'
+                : 'rgba(20,28,40,.045)',
           }}
           contentStyle={{
             background: tooltipBackground,
             border: tooltipBorder,
             borderRadius: 10,
-            fontSize: 11,
+            fontSize: 13,
           }}
         />
         <Bar
           dataKey="count"
           name={t('earthquakesChart')}
-          fill="#ff715b"
-          radius={[5, 5, 1, 1]}
-        />
+          radius={[6, 6, 1, 1]}
+        >
+          {data.map((entry) => (
+            <Cell
+              key={entry.label}
+              fill={entry.label === activeBucket ? '#b8ed3f' : '#ff715b'}
+              opacity={activeBucket && entry.label !== activeBucket ? 0.42 : 1}
+            />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
