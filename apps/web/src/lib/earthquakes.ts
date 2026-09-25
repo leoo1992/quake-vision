@@ -205,6 +205,7 @@ export function magnitudeBuckets(events: EarthquakeEvent[]) {
 export function activitySeries(
   events: EarthquakeEvent[],
   range: TimeRange,
+  localeTag = 'pt-BR',
 ) {
   const bucketMs =
     range === 'day'
@@ -225,11 +226,11 @@ export function activitySeries(
       time,
       label:
         range === 'month'
-          ? new Intl.DateTimeFormat('pt-BR', {
+          ? new Intl.DateTimeFormat(localeTag, {
               day: '2-digit',
               month: '2-digit',
             }).format(time)
-          : new Intl.DateTimeFormat('pt-BR', {
+          : new Intl.DateTimeFormat(localeTag, {
               hour: '2-digit',
               minute: '2-digit',
             }).format(time),
