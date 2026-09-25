@@ -63,9 +63,8 @@ export function ActivityChart({
         margin={{ top: 14, right: 8, bottom: 2, left: -18 }}
         style={{ cursor: onSelect ? 'pointer' : 'default' }}
         onClick={(state) => {
-          const payload = state?.activePayload?.[0]?.payload as
-            | { time: number; label: string }
-            | undefined;
+          const index = Number(state.activeTooltipIndex);
+          const payload = Number.isInteger(index) ? data[index] : undefined;
           if (!payload || !onSelect) return;
           onSelect({
             start: payload.time,
@@ -153,9 +152,8 @@ export function MagnitudeChart({
         margin={{ top: 12, right: 8, bottom: 2, left: -18 }}
         style={{ cursor: onSelect ? 'pointer' : 'default' }}
         onClick={(state) => {
-          const payload = state?.activePayload?.[0]?.payload as
-            | { label: string }
-            | undefined;
+          const index = Number(state.activeTooltipIndex);
+          const payload = Number.isInteger(index) ? data[index] : undefined;
           if (payload?.label && onSelect) onSelect(payload.label);
         }}
       >
