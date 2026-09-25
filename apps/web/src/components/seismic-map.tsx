@@ -97,12 +97,17 @@ export function SeismicMap({
   const modeRef = useRef(mode);
   const initialThemeRef = useRef(theme);
 
-  eventsRef.current = events;
-  modeRef.current = mode;
-
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
