@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import type { ThemePreference } from '@/components/experience-provider';
 import type {
   EarthquakeEvent,
   MapMode,
@@ -11,6 +12,7 @@ interface SeismicMapProps {
   events: EarthquakeEvent[];
   selectedId: string | null;
   mode: MapMode;
+  theme: ThemePreference;
   onSelect: (id: string) => void;
 }
 
@@ -30,9 +32,54 @@ function toFeatureCollection(events: EarthquakeEvent[]) {
         depth: event.depth,
         place: event.place,
         color: getMagnitudeColor(event.magnitude),
-        weight: Math.max(0.12, event.magnitude / 8),
       },
     })),
+  };
+}
+
+function rasterPaint(theme: ThemePreference) {
+  return theme === 'dark'
+    ? {
+        'raster-saturation': -0.92,
+        'raster-contrast': 0.25,
+        'raster-brightness-min': 0.04,
+        'raster-brightness-max': 0.42,
+      }
+    : {
+        'raster-saturation': -0.12,
+        'raster-contrast': 0.03,
+        'raster-brightness-min': 0.12,
+        'raster-brightness-max': 1,
+      };
+}
+
+function baseStyle(theme: ThemePreference): import('maplibre-gl').StyleSpecification {
+  return {
+    version: 8,
+    sources: {
+      'osm-base': {
+        type: 'raster',
+        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: '© OpenStreetMap contributors',
+      },
+    },
+    layers: [
+      {
+        id: 'map-background',
+        type: 'background',
+        paint: {
+          'background-color': theme === 'dark' ? '#0a0d11' : '#e8ece8',
+        },
+      },
+      {
+        id: 'osm-basemap',
+        type: 'raster',
+        source: 'osm-base',
+        paint: rasterPaint(theme),
+      },
+    ],
   };
 }
 
@@ -40,11 +87,13 @@ export function SeismicMap({
   events,
   selectedId,
   mode,
+  theme,
   onSelect,
 }: SeismicMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('maplibre-gl').Map | null>(null);
   const onSelectRef = useRef(onSelect);
+  const initialThemeRef = useRef(theme);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -55,13 +104,12 @@ export function SeismicMap({
 
     let disposed = false;
 
-    void import('maplibre-gl').then((module) => {
+    void import('maplibre-gl').then((maplibregl) => {
       if (disposed || !containerRef.current) return;
 
-      const maplibregl = module;
       const map = new maplibregl.Map({
         container: containerRef.current,
-        style: 'https://tiles.openfreemap.org/styles/dark',
+        style: baseStyle(initialThemeRef.current),
         center: [8, 18],
         zoom: 1.45,
         minZoom: 1,
@@ -183,6 +231,24 @@ export function SeismicMap({
           },
         });
 
+        map.addLayer({
+          id: 'quake-hit',
+          type: 'circle',
+          source: 'quakes',
+          paint: {
+            'circle-radius': [
+              'interpolate',
+              ['linear'],
+              ['get', 'magnitude'],
+              1,
+              10,
+              7,
+              20,
+            ],
+            'circle-opacity': 0,
+          },
+        });
+
         map.addSource('selected-quake', {
           type: 'geojson',
           data: {
@@ -198,7 +264,7 @@ export function SeismicMap({
           paint: {
             'circle-radius': 17,
             'circle-color': 'rgba(0,0,0,0)',
-            'circle-stroke-color': '#d9ff66',
+            'circle-stroke-color': '#b8ed3f',
             'circle-stroke-width': 2.5,
             'circle-stroke-opacity': 0.95,
           },
@@ -206,25 +272,31 @@ export function SeismicMap({
 
         map.on(
           'click',
-          'quake-points',
+          'quake-hit',
           (
             event: import('maplibre-gl').MapMouseEvent & {
               features?: import('maplibre-gl').MapGeoJSONFeature[];
             },
           ) => {
-          const feature = event.features?.[0];
-          const id = feature?.properties?.id as string | undefined;
+            const feature = event.features?.[0];
+            const id = feature?.properties?.id as string | undefined;
             if (id) onSelectRef.current(id);
           },
         );
 
-        map.on('mouseenter', 'quake-points', () => {
+        map.on('mouseenter', 'quake-hit', () => {
           map.getCanvas().style.cursor = 'pointer';
         });
 
-        map.on('mouseleave', 'quake-points', () => {
+        map.on('mouseleave', 'quake-hit', () => {
           map.getCanvas().style.cursor = '';
         });
+      });
+
+      map.on('error', (event) => {
+        if (event.error) {
+          console.warn('QuakeVision map resource error:', event.error.message);
+        }
       });
 
       mapRef.current = map;
@@ -236,6 +308,24 @@ export function SeismicMap({
       mapRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded() || !map.getLayer('osm-basemap')) return;
+
+    const paint = rasterPaint(theme);
+    Object.entries(paint).forEach(([property, value]) => {
+      map.setPaintProperty('osm-basemap', property, value);
+    });
+
+    if (map.getLayer('map-background')) {
+      map.setPaintProperty(
+        'map-background',
+        'background-color',
+        theme === 'dark' ? '#0a0d11' : '#e8ece8',
+      );
+    }
+  }, [theme]);
 
   useEffect(() => {
     const map = mapRef.current;
