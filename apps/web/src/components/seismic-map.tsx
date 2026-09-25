@@ -145,6 +145,18 @@ export function SeismicMap({
           promoteId: 'id',
         });
 
+        map.addSource('quake-clusters', {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: [],
+          },
+          promoteId: 'id',
+          cluster: true,
+          clusterRadius: 46,
+          clusterMaxZoom: 5,
+        });
+
         map.addLayer({
           id: 'quake-heat',
           type: 'heatmap',
@@ -186,24 +198,99 @@ export function SeismicMap({
         });
 
         map.addLayer({
+          id: 'quake-cluster-glow',
+          type: 'circle',
+          source: 'quake-clusters',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              25,
+              20,
+              31,
+              100,
+              39,
+              500,
+              47,
+            ],
+            'circle-color': [
+              'step',
+              ['get', 'point_count'],
+              '#77d8be',
+              20,
+              '#d7ef63',
+              100,
+              '#ff9045',
+              500,
+              '#ff5c45',
+            ],
+            'circle-opacity': 0.16,
+            'circle-blur': 0.5,
+          },
+          layout: {
+            visibility: 'visible',
+          },
+        });
+
+        map.addLayer({
+          id: 'quake-clusters',
+          type: 'circle',
+          source: 'quake-clusters',
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-radius': [
+              'step',
+              ['get', 'point_count'],
+              14,
+              20,
+              18,
+              100,
+              23,
+              500,
+              29,
+            ],
+            'circle-color': [
+              'step',
+              ['get', 'point_count'],
+              '#77d8be',
+              20,
+              '#d7ef63',
+              100,
+              '#ff9045',
+              500,
+              '#ff5c45',
+            ],
+            'circle-opacity': 0.95,
+            'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1.5,
+            'circle-stroke-opacity': 0.9,
+          },
+          layout: {
+            visibility: 'visible',
+          },
+        });
+
+        map.addLayer({
           id: 'quake-glow',
           type: 'circle',
-          source: 'quakes',
+          source: 'quake-clusters',
+          filter: ['!', ['has', 'point_count']],
           paint: {
             'circle-radius': [
               'interpolate',
               ['linear'],
               ['get', 'magnitude'],
               1,
-              7,
+              8,
               4,
-              14,
+              15,
               7,
-              29,
+              30,
             ],
             'circle-color': ['get', 'color'],
-            'circle-opacity': 0.22,
-            'circle-blur': 0.75,
+            'circle-opacity': 0.25,
+            'circle-blur': 0.72,
           },
           layout: {
             visibility: 'visible',
@@ -213,28 +300,46 @@ export function SeismicMap({
         map.addLayer({
           id: 'quake-points',
           type: 'circle',
-          source: 'quakes',
+          source: 'quake-clusters',
+          filter: ['!', ['has', 'point_count']],
           paint: {
             'circle-radius': [
               'interpolate',
               ['linear'],
               ['get', 'magnitude'],
               1,
-              4,
+              5,
               3,
-              5,
+              6,
               4,
-              7,
+              8,
               5,
-              9,
+              10,
               7,
-              13,
+              14,
             ],
             'circle-color': ['get', 'color'],
-            'circle-opacity': 0.98,
+            'circle-opacity': 1,
             'circle-stroke-color': '#ffffff',
+            'circle-stroke-width': 1.25,
+            'circle-stroke-opacity': 0.95,
+          },
+          layout: {
+            visibility: 'visible',
+          },
+        });
+
+        map.addLayer({
+          id: 'quake-epicenter-center',
+          type: 'circle',
+          source: 'quake-clusters',
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-radius': 2.2,
+            'circle-color': '#ffffff',
+            'circle-stroke-color': '#101318',
             'circle-stroke-width': 1,
-            'circle-stroke-opacity': 0.82,
+            'circle-opacity': 1,
           },
           layout: {
             visibility: 'visible',
@@ -244,16 +349,17 @@ export function SeismicMap({
         map.addLayer({
           id: 'quake-hit',
           type: 'circle',
-          source: 'quakes',
+          source: 'quake-clusters',
+          filter: ['!', ['has', 'point_count']],
           paint: {
             'circle-radius': [
               'interpolate',
               ['linear'],
               ['get', 'magnitude'],
               1,
-              11,
+              12,
               7,
-              22,
+              24,
             ],
             'circle-opacity': 0,
           },
@@ -278,6 +384,44 @@ export function SeismicMap({
             'circle-stroke-width': 3,
             'circle-stroke-opacity': 1,
           },
+        });
+
+        map.on(
+          'click',
+          'quake-clusters',
+          (
+            event: import('maplibre-gl').MapMouseEvent & {
+              features?: import('maplibre-gl').MapGeoJSONFeature[];
+            },
+          ) => {
+            const feature = event.features?.[0];
+
+            if (
+              !feature ||
+              feature.geometry.type !== 'Point'
+            ) {
+              return;
+            }
+
+            const coordinates = feature.geometry.coordinates as [
+              number,
+              number,
+            ];
+
+            map.easeTo({
+              center: coordinates,
+              zoom: Math.min(map.getZoom() + 2.2, 7),
+              duration: 650,
+            });
+          },
+        );
+
+        map.on('mouseenter', 'quake-clusters', () => {
+          map.getCanvas().style.cursor = 'zoom-in';
+        });
+
+        map.on('mouseleave', 'quake-clusters', () => {
+          map.getCanvas().style.cursor = '';
         });
 
         map.on(
@@ -367,11 +511,16 @@ export function SeismicMap({
     if (!mapReady) return;
 
     const map = mapRef.current;
+    const data = toFeatureCollection(events);
     const source = map?.getSource(
       'quakes',
     ) as import('maplibre-gl').GeoJSONSource | undefined;
+    const clusterSource = map?.getSource(
+      'quake-clusters',
+    ) as import('maplibre-gl').GeoJSONSource | undefined;
 
-    source?.setData(toFeatureCollection(events));
+    source?.setData(data);
+    clusterSource?.setData(data);
     map?.triggerRepaint();
   }, [events, mapReady]);
 
@@ -385,12 +534,32 @@ export function SeismicMap({
     const heatVisibility = mode === 'heat' ? 'visible' : 'none';
 
     map.setLayoutProperty(
+      'quake-cluster-glow',
+      'visibility',
+      pointVisibility,
+    );
+    map.setLayoutProperty(
+      'quake-clusters',
+      'visibility',
+      pointVisibility,
+    );
+    map.setLayoutProperty(
       'quake-points',
       'visibility',
       pointVisibility,
     );
     map.setLayoutProperty(
       'quake-glow',
+      'visibility',
+      pointVisibility,
+    );
+    map.setLayoutProperty(
+      'quake-epicenter-center',
+      'visibility',
+      pointVisibility,
+    );
+    map.setLayoutProperty(
+      'quake-hit',
       'visibility',
       pointVisibility,
     );
