@@ -319,9 +319,26 @@ export function SeismicMap({
     if (!map?.isStyleLoaded() || !map.getLayer('osm-basemap')) return;
 
     const paint = rasterPaint(theme);
-    Object.entries(paint).forEach(([property, value]) => {
-      map.setPaintProperty('osm-basemap', property, value);
-    });
+    map.setPaintProperty(
+      'osm-basemap',
+      'raster-saturation',
+      paint['raster-saturation'],
+    );
+    map.setPaintProperty(
+      'osm-basemap',
+      'raster-contrast',
+      paint['raster-contrast'],
+    );
+    map.setPaintProperty(
+      'osm-basemap',
+      'raster-brightness-min',
+      paint['raster-brightness-min'],
+    );
+    map.setPaintProperty(
+      'osm-basemap',
+      'raster-brightness-max',
+      paint['raster-brightness-max'],
+    );
 
     if (map.getLayer('map-background')) {
       map.setPaintProperty(
