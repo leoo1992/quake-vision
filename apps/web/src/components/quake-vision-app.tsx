@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import { ExperienceControls } from '@/components/experience-controls';
+import { useExperience } from '@/components/experience-provider';
 import {
   ActivityChart,
   MagnitudeChart,
@@ -10,7 +12,6 @@ import {
   datasetStats,
   formatDepth,
   formatMagnitude,
-  formatRelativeTime,
   getMagnitudeColor,
   type EarthquakeDataset,
   type EarthquakeEvent,
@@ -95,6 +96,8 @@ function EventRow({
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
+  const { relativeTime } = useExperience();
+
   return (
     <button
       type="button"
@@ -114,7 +117,7 @@ function EventRow({
       <span className="event-row-copy">
         <strong>{event.place}</strong>
         <small>
-          {formatRelativeTime(event.time)} · {formatDepth(event.depth)}
+          {relativeTime(event.time)} · {formatDepth(event.depth)}
         </small>
       </span>
       {event.tsunami ? <b className="tsunami-tag">TSU</b> : null}
@@ -124,6 +127,7 @@ function EventRow({
 
 export function QuakeVisionApp() {
   const dispatch = useAppDispatch();
+  const { localeTag, theme, t, relativeTime } = useExperience();
   const {
     range,
     minMagnitude,
@@ -161,7 +165,7 @@ export function QuakeVisionApp() {
         setError(
           reason instanceof Error
             ? reason.message
-            : 'Falha ao carregar terremotos.',
+            : t('dataSourceFailure'),
         );
       } finally {
         if (!cancelled) setLoading(false);
@@ -173,7 +177,7 @@ export function QuakeVisionApp() {
     return () => {
       cancelled = true;
     };
-  }, [range, minMagnitude, maxDepth]);
+  }, [range, minMagnitude, maxDepth, t]);
 
   const events = dataset?.events ?? [];
   const filteredEvents = useMemo(() => {
@@ -216,43 +220,46 @@ export function QuakeVisionApp() {
           </span>
           <div>
             <strong>QuakeVision</strong>
-            <small>GLOBAL SEISMIC MONITOR</small>
+            <small>{t('globalSeismicMonitor').toUpperCase()}</small>
           </div>
         </div>
 
         <div className="live-source">
           <span className="live-dot" />
           <div>
-            <strong>USGS LIVE DATA</strong>
+            <strong>{t('usgsLiveData').toUpperCase()}</strong>
             <small>
               {dataset
-                ? 'atualizado ' + formatRelativeTime(dataset.generated)
-                : 'sincronizando'}
+                ? relativeTime(dataset.generated)
+                : t('syncing')}
             </small>
           </div>
         </div>
 
-        <div className="mobile-actions">
-          <button
-            type="button"
-            onClick={() =>
-              setMobilePanel((panel) =>
-                panel === 'filters' ? 'none' : 'filters',
-              )
-            }
-          >
-            Filtros
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              setMobilePanel((panel) =>
-                panel === 'events' ? 'none' : 'events',
-              )
-            }
-          >
-            Eventos
-          </button>
+        <div className="topbar-actions">
+          <ExperienceControls />
+          <div className="mobile-actions">
+            <button
+              type="button"
+              onClick={() =>
+                setMobilePanel((panel) =>
+                  panel === 'filters' ? 'none' : 'filters',
+                )
+              }
+            >
+              {t('filters')}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setMobilePanel((panel) =>
+                  panel === 'events' ? 'none' : 'events',
+                )
+              }
+            >
+              {t('events')}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -263,8 +270,8 @@ export function QuakeVisionApp() {
         >
           <div className="panel-heading">
             <div>
-              <span>MONITOR CONFIG</span>
-              <h2>Filtros sísmicos</h2>
+              <span>{t('monitorConfig').toUpperCase()}</span>
+              <h2>{t('seismicFilters')}</h2>
             </div>
             <button
               type="button"
@@ -276,7 +283,7 @@ export function QuakeVisionApp() {
           </div>
 
           <div className="filter-block">
-            <label>PERÍODO</label>
+            <label>{t('period').toUpperCase()}</label>
             <div className="segmented-control">
               <RangeButton
                 value="day"
@@ -301,7 +308,7 @@ export function QuakeVisionApp() {
 
           <div className="filter-block">
             <div className="filter-label-row">
-              <label>MAGNITUDE MÍNIMA</label>
+              <label>{t('minimumMagnitude').toUpperCase()}</label>
               <b>{minMagnitude.toFixed(1)}</b>
             </div>
             <input
@@ -324,7 +331,7 @@ export function QuakeVisionApp() {
 
           <div className="filter-block">
             <div className="filter-label-row">
-              <label>PROFUNDIDADE MÁX.</label>
+              <label>{t('maximumDepth').toUpperCase()}</label>
               <b>{maxDepth} km</b>
             </div>
             <input
@@ -340,7 +347,7 @@ export function QuakeVisionApp() {
           </div>
 
           <div className="filter-block">
-            <label>VISUALIZAÇÃO</label>
+            <label>{t('visualization').toUpperCase()}</label>
             <div className="segmented-control">
               <button
                 type="button"
@@ -360,7 +367,7 @@ export function QuakeVisionApp() {
           </div>
 
           <div className="legend">
-            <span>MAGNITUDE</span>
+            <span>{t('magnitude').toUpperCase()}</span>
             {[2, 3, 4, 5, 6, 7].map((magnitude) => (
               <div key={magnitude}>
                 <i
@@ -376,9 +383,9 @@ export function QuakeVisionApp() {
           </div>
 
           <div className="source-note">
-            <span>DATA PIPELINE</span>
+            <span>{t('dataPipeline').toUpperCase()}</span>
             <p>
-              USGS GeoJSON → NestJS cache/normalização → Redux → MapLibre.
+              {t('pipelineCopy')}
             </p>
           </div>
         </aside>
@@ -388,29 +395,30 @@ export function QuakeVisionApp() {
             events={filteredEvents}
             selectedId={selectedId}
             mode={mapMode}
+            theme={theme}
             onSelect={selectEvent}
           />
 
           <div className="metrics-strip">
             <Metric
-              label="EVENTOS"
-              value={events.length.toLocaleString('pt-BR')}
+              label={t('eventsMetric').toUpperCase()}
+              value={events.length.toLocaleString(localeTag)}
               detail={
                 range === 'day'
-                  ? 'últimas 24h'
+                  ? t('last24h')
                   : range === 'week'
-                    ? 'últimos 7 dias'
-                    : 'últimos 30 dias'
+                    ? t('last7d')
+                    : t('last30d')
               }
             />
             <Metric
-              label="MAIOR MAG."
+              label={t('strongestMagnitude').toUpperCase()}
               value={
                 stats.strongest
                   ? formatMagnitude(stats.strongest.magnitude)
                   : '—'
               }
-              detail={stats.strongest?.place ?? 'sem eventos'}
+              detail={stats.strongest?.place ?? t('noEvents')}
               accent={
                 stats.strongest
                   ? getMagnitudeColor(stats.strongest.magnitude)
@@ -418,28 +426,28 @@ export function QuakeVisionApp() {
               }
             />
             <Metric
-              label="MAG. MÉDIA"
+              label={t('averageMagnitude').toUpperCase()}
               value={stats.averageMagnitude.toFixed(1)}
-              detail="eventos carregados"
+              detail={t('loadedEvents')}
             />
             <Metric
-              label="PROF. MÉDIA"
+              label={t('averageDepth').toUpperCase()}
               value={Math.round(stats.averageDepth) + ' km'}
-              detail={stats.tsunamiCount + ' alerta(s) tsunami'}
+              detail={stats.tsunamiCount + ' ' + t('tsunamiAlerts')}
             />
           </div>
 
           {loading ? (
             <div className="map-status">
               <span className="seismic-loader" />
-              <strong>Sincronizando USGS</strong>
-              <small>catalogando epicentros</small>
+              <strong>{t('syncingUsgs')}</strong>
+              <small>{t('catalogingEpicenters')}</small>
             </div>
           ) : null}
 
           {error ? (
             <div className="error-banner">
-              <strong>Falha na fonte de dados</strong>
+              <strong>{t('dataSourceFailure')}</strong>
               <span>{error}</span>
             </div>
           ) : null}
@@ -447,9 +455,9 @@ export function QuakeVisionApp() {
           <div className="map-caption">
             <span className="pulse-icon" />
             <div>
-              <strong>{filteredEvents.length} epicentros visíveis</strong>
+              <strong>{filteredEvents.length} {t('visibleEpicenters')}</strong>
               <small>
-                tamanho e cor representam magnitude · clique para inspecionar
+                {t('mapHint')}
               </small>
             </div>
           </div>
@@ -461,8 +469,8 @@ export function QuakeVisionApp() {
         >
           <div className="panel-heading">
             <div>
-              <span>SEISMIC FEED</span>
-              <h2>Eventos relevantes</h2>
+              <span>{t('seismicFeed').toUpperCase()}</span>
+              <h2>{t('relevantEvents')}</h2>
             </div>
             <button
               type="button"
@@ -478,7 +486,7 @@ export function QuakeVisionApp() {
             <input
               value={search}
               onChange={(event) => dispatch(setSearch(event.target.value))}
-              placeholder="Buscar local..."
+              placeholder={t('searchLocation')}
             />
           </label>
 
@@ -498,8 +506,8 @@ export function QuakeVisionApp() {
           <div className="chart-block">
             <div className="chart-heading">
               <div>
-                <span>ATIVIDADE</span>
-                <strong>Frequência sísmica</strong>
+                <span>{t('activity').toUpperCase()}</span>
+                <strong>{t('seismicFrequency')}</strong>
               </div>
               <small>{events.length} eventos</small>
             </div>
@@ -511,10 +519,10 @@ export function QuakeVisionApp() {
           <div className="chart-block">
             <div className="chart-heading">
               <div>
-                <span>DISTRIBUIÇÃO</span>
-                <strong>Por magnitude</strong>
+                <span>{t('distribution').toUpperCase()}</span>
+                <strong>{t('byMagnitude')}</strong>
               </div>
-              <small>M escala</small>
+              <small>{t('magnitudeScale')}</small>
             </div>
             <div className="chart-body">
               <MagnitudeChart events={events} />
@@ -529,8 +537,8 @@ export function QuakeVisionApp() {
         >
           <div className="panel-heading">
             <div>
-              <span>EVENT INSPECTOR</span>
-              <h2>{selected ? 'Terremoto selecionado' : 'Sem seleção'}</h2>
+              <span>{t('eventInspector').toUpperCase()}</span>
+              <h2>{selected ? t('selectedEarthquake') : t('noSelection')}</h2>
             </div>
             {selected ? (
               <button
@@ -557,7 +565,7 @@ export function QuakeVisionApp() {
                 </span>
                 <strong>{selected.place}</strong>
                 <small>
-                  {new Intl.DateTimeFormat('pt-BR', {
+                  {new Intl.DateTimeFormat(localeTag, {
                     dateStyle: 'medium',
                     timeStyle: 'medium',
                   }).format(selected.time)}
@@ -566,27 +574,27 @@ export function QuakeVisionApp() {
 
               <div className="detail-grid">
                 <div>
-                  <span>PROFUNDIDADE</span>
+                  <span>{t('depth').toUpperCase()}</span>
                   <strong>{formatDepth(selected.depth)}</strong>
                 </div>
                 <div>
-                  <span>SIGNIFICÂNCIA</span>
+                  <span>{t('significance').toUpperCase()}</span>
                   <strong>{selected.significance}</strong>
                 </div>
                 <div>
-                  <span>SENTIRAM</span>
+                  <span>{t('felt').toUpperCase()}</span>
                   <strong>
-                    {selected.felt.toLocaleString('pt-BR')}
+                    {selected.felt.toLocaleString(localeTag)}
                   </strong>
                 </div>
                 <div>
-                  <span>TSUNAMI</span>
-                  <strong>{selected.tsunami ? 'SIM' : 'NÃO'}</strong>
+                  <span>{t('tsunami').toUpperCase()}</span>
+                  <strong>{selected.tsunami ? t('yes').toUpperCase() : t('no').toUpperCase()}</strong>
                 </div>
               </div>
 
               <div className="coordinates">
-                <span>COORDENADAS</span>
+                <span>{t('coordinates').toUpperCase()}</span>
                 <code>
                   {selected.latitude.toFixed(3)}°,{' '}
                   {selected.longitude.toFixed(3)}°
@@ -599,14 +607,14 @@ export function QuakeVisionApp() {
                 rel="noreferrer"
                 className="usgs-link"
               >
-                Abrir evento oficial no USGS ↗
+                {t('openOfficialEvent')} ↗
               </a>
             </>
           ) : (
             <div className="empty-detail">
               <span>◎</span>
               <p>
-                Selecione um epicentro no mapa ou um item da lista.
+                {t('selectEpicenter')}
               </p>
             </div>
           )}
