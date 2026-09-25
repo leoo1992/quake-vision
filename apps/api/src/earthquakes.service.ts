@@ -36,7 +36,7 @@ interface UsgsFeatureCollection {
   }>;
 }
 
-interface Dataset {
+export interface Dataset {
   generated: number;
   sourceTitle: string;
   count: number;
