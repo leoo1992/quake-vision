@@ -202,10 +202,27 @@ export function SeismicMap({
               7,
               42,
             ],
-            'heatmap-opacity': 0.88,
+            'heatmap-color': [
+              'interpolate',
+              ['linear'],
+              ['heatmap-density'],
+              0,
+              'rgba(0,0,0,0)',
+              0.15,
+              'rgba(71,197,255,0.30)',
+              0.35,
+              'rgba(82,224,172,0.48)',
+              0.55,
+              'rgba(215,239,99,0.62)',
+              0.75,
+              'rgba(255,144,69,0.78)',
+              1,
+              'rgba(255,72,72,0.96)',
+            ],
+            'heatmap-opacity': 0.4,
           },
           layout: {
-            visibility: 'none',
+            visibility: 'visible',
           },
         });
 
@@ -529,6 +546,50 @@ export function SeismicMap({
 
     source?.setData(data);
     clusterSource?.setData(data);
+
+    if (map && events.length > 0) {
+      if (events.length === 1) {
+        const event = events[0]!;
+        map.easeTo({
+          center: [event.longitude, event.latitude],
+          zoom: 5,
+          duration: 650,
+        });
+      } else {
+        const longitudes = events.map((event) => event.longitude);
+        const latitudes = events.map((event) => event.latitude);
+        const minLon = Math.min(...longitudes);
+        const maxLon = Math.max(...longitudes);
+        const minLat = Math.min(...latitudes);
+        const maxLat = Math.max(...latitudes);
+        const longitudeSpan = maxLon - minLon;
+
+        if (longitudeSpan > 300) {
+          map.easeTo({
+            center: [0, 12],
+            zoom: 1.2,
+            duration: 650,
+          });
+        } else {
+          map.fitBounds(
+            [
+              [minLon, minLat],
+              [maxLon, maxLat],
+            ],
+            {
+              padding:
+                containerRef.current?.clientWidth &&
+                containerRef.current.clientWidth < 760
+                  ? 54
+                  : 86,
+              maxZoom: 5,
+              duration: 700,
+            },
+          );
+        }
+      }
+    }
+
     map?.triggerRepaint();
   }, [events, mapReady]);
 
@@ -538,43 +599,46 @@ export function SeismicMap({
     const map = mapRef.current;
     if (!map) return;
 
-    const pointVisibility = mode === 'points' ? 'visible' : 'none';
-    const heatVisibility = mode === 'heat' ? 'visible' : 'none';
+    const clusterVisibility = mode === 'points' ? 'visible' : 'none';
 
     map.setLayoutProperty(
       'quake-cluster-glow',
       'visibility',
-      pointVisibility,
+      clusterVisibility,
     );
     map.setLayoutProperty(
       'quake-clusters',
       'visibility',
-      pointVisibility,
+      clusterVisibility,
     );
-    map.setLayoutProperty(
-      'quake-points',
-      'visibility',
-      pointVisibility,
-    );
-    map.setLayoutProperty(
-      'quake-glow',
-      'visibility',
-      pointVisibility,
-    );
+
+    // Exact USGS epicenters remain visible in both visualization modes.
+    map.setLayoutProperty('quake-points', 'visibility', 'visible');
+    map.setLayoutProperty('quake-glow', 'visibility', 'visible');
     map.setLayoutProperty(
       'quake-epicenter-center',
       'visibility',
-      pointVisibility,
+      'visible',
     );
-    map.setLayoutProperty(
-      'quake-hit',
-      'visibility',
-      pointVisibility,
-    );
-    map.setLayoutProperty(
+    map.setLayoutProperty('quake-hit', 'visibility', 'visible');
+
+    // Keep a colored seismic-density layer below the pins in both modes.
+    map.setLayoutProperty('quake-heat', 'visibility', 'visible');
+    map.setPaintProperty(
       'quake-heat',
-      'visibility',
-      heatVisibility,
+      'heatmap-opacity',
+      mode === 'heat' ? 0.9 : 0.34,
+    );
+
+    map.setPaintProperty(
+      'quake-points',
+      'circle-opacity',
+      mode === 'heat' ? 0.78 : 1,
+    );
+    map.setPaintProperty(
+      'quake-glow',
+      'circle-opacity',
+      mode === 'heat' ? 0.18 : 0.32,
     );
 
     map.triggerRepaint();
