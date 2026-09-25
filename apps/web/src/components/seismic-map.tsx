@@ -93,7 +93,12 @@ export function SeismicMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('maplibre-gl').Map | null>(null);
   const onSelectRef = useRef(onSelect);
+  const eventsRef = useRef(events);
+  const modeRef = useRef(mode);
   const initialThemeRef = useRef(theme);
+
+  eventsRef.current = events;
+  modeRef.current = mode;
 
   useEffect(() => {
     onSelectRef.current = onSelect;
@@ -135,7 +140,7 @@ export function SeismicMap({
       map.on('load', () => {
         map.addSource('quakes', {
           type: 'geojson',
-          data: toFeatureCollection(events),
+          data: toFeatureCollection(eventsRef.current),
           promoteId: 'id',
         });
 
@@ -175,7 +180,7 @@ export function SeismicMap({
             'heatmap-opacity': 0.82,
           },
           layout: {
-            visibility: mode === 'heat' ? 'visible' : 'none',
+            visibility: modeRef.current === 'heat' ? 'visible' : 'none',
           },
         });
 
@@ -200,7 +205,7 @@ export function SeismicMap({
             'circle-blur': 0.75,
           },
           layout: {
-            visibility: mode === 'points' ? 'visible' : 'none',
+            visibility: modeRef.current === 'points' ? 'visible' : 'none',
           },
         });
 
@@ -227,7 +232,7 @@ export function SeismicMap({
             'circle-stroke-opacity': 0.5,
           },
           layout: {
-            visibility: mode === 'points' ? 'visible' : 'none',
+            visibility: modeRef.current === 'points' ? 'visible' : 'none',
           },
         });
 
