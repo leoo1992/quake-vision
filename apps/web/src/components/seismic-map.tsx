@@ -274,9 +274,8 @@ export function SeismicMap({
         map.addLayer({
           id: 'quake-glow',
           type: 'circle',
-          source: 'quake-clusters',
-          filter: ['!', ['has', 'point_count']],
-          paint: {
+          source: 'quakes',
+                    paint: {
             'circle-radius': [
               'interpolate',
               ['linear'],
@@ -289,7 +288,7 @@ export function SeismicMap({
               30,
             ],
             'circle-color': ['get', 'color'],
-            'circle-opacity': 0.25,
+            'circle-opacity': 0.32,
             'circle-blur': 0.72,
           },
           layout: {
@@ -300,28 +299,27 @@ export function SeismicMap({
         map.addLayer({
           id: 'quake-points',
           type: 'circle',
-          source: 'quake-clusters',
-          filter: ['!', ['has', 'point_count']],
-          paint: {
+          source: 'quakes',
+                    paint: {
             'circle-radius': [
               'interpolate',
               ['linear'],
               ['get', 'magnitude'],
               1,
-              5,
+              4.5,
               3,
               6,
               4,
               8,
               5,
-              10,
+              10.5,
               7,
-              14,
+              14.5,
             ],
             'circle-color': ['get', 'color'],
             'circle-opacity': 1,
             'circle-stroke-color': '#ffffff',
-            'circle-stroke-width': 1.25,
+            'circle-stroke-width': 1.5,
             'circle-stroke-opacity': 0.95,
           },
           layout: {
@@ -332,10 +330,9 @@ export function SeismicMap({
         map.addLayer({
           id: 'quake-epicenter-center',
           type: 'circle',
-          source: 'quake-clusters',
-          filter: ['!', ['has', 'point_count']],
-          paint: {
-            'circle-radius': 2.2,
+          source: 'quakes',
+                    paint: {
+            'circle-radius': 2.4,
             'circle-color': '#ffffff',
             'circle-stroke-color': '#101318',
             'circle-stroke-width': 1,
@@ -349,9 +346,8 @@ export function SeismicMap({
         map.addLayer({
           id: 'quake-hit',
           type: 'circle',
-          source: 'quake-clusters',
-          filter: ['!', ['has', 'point_count']],
-          paint: {
+          source: 'quakes',
+                    paint: {
             'circle-radius': [
               'interpolate',
               ['linear'],
