@@ -22,7 +22,7 @@ import {
   clearChartFilters,
   selectEarthquake,
   setMapMode,
-  setMaxDepth,
+  setMinDepth,
   setMinMagnitude,
   setRange,
   setSearch,
@@ -165,7 +165,7 @@ export function QuakeVisionApp() {
   const {
     range,
     minMagnitude,
-    maxDepth,
+    minDepth,
     mapMode,
     selectedId,
     search,
@@ -175,6 +175,7 @@ export function QuakeVisionApp() {
   const [dataset, setDataset] = useState<EarthquakeDataset | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tsunamiOnly, setTsunamiOnly] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
   const [eventsCollapsed, setEventsCollapsed] = useState(false);
   const [analyticsCollapsed, setAnalyticsCollapsed] = useState(false);
@@ -193,7 +194,7 @@ export function QuakeVisionApp() {
         const result = await loadEarthquakes({
           range,
           minMagnitude,
-          maxDepth,
+          minDepth,
         });
         if (cancelled) return;
         setDataset(result);
@@ -212,7 +213,7 @@ export function QuakeVisionApp() {
     return () => {
       cancelled = true;
     };
-  }, [range, minMagnitude, maxDepth, t]);
+  }, [range, minMagnitude, minDepth, t]);
 
   const events = useMemo(() => dataset?.events ?? [], [dataset]);
   const filteredEvents = useMemo(() => {
@@ -225,6 +226,8 @@ export function QuakeVisionApp() {
       ) {
         return false;
       }
+
+      if (tsunamiOnly && !event.tsunami) return false;
 
       if (!matchesMagnitudeBucket(event.magnitude, magnitudeBucket)) {
         return false;
@@ -239,7 +242,7 @@ export function QuakeVisionApp() {
 
       return true;
     });
-  }, [events, magnitudeBucket, search, timeBucket]);
+  }, [events, magnitudeBucket, search, timeBucket, tsunamiOnly]);
 
   const selected = events.find((event) => event.id === selectedId) ?? null;
   const stats = useMemo(() => datasetStats(filteredEvents), [filteredEvents]);
@@ -405,19 +408,31 @@ export function QuakeVisionApp() {
 
             <div className="filter-block">
               <div className="filter-label-row">
-                <label>{t('maximumDepth').toUpperCase()}</label>
-                <b>{maxDepth} km</b>
+                <label>{t('minimumDepth').toUpperCase()}</label>
+                <b>{minDepth} km</b>
               </div>
               <input
                 type="range"
-                min="30"
+                min="0"
                 max="700"
                 step="10"
-                value={maxDepth}
+                value={minDepth}
                 onChange={(event) =>
-                  dispatch(setMaxDepth(Number(event.target.value)))
+                  dispatch(setMinDepth(Number(event.target.value)))
                 }
               />
+            </div>
+
+            <div className="filter-block">
+              <label>{t('tsunamiFilter').toUpperCase()}</label>
+              <div className="segmented-control">
+                <button type="button" data-active={!tsunamiOnly} onClick={() => setTsunamiOnly(false)}>
+                  {t('allEvents')}
+                </button>
+                <button type="button" data-active={tsunamiOnly} onClick={() => setTsunamiOnly(true)}>
+                  {t('tsunamiOnly')}
+                </button>
+              </div>
             </div>
 
             <div className="filter-block">
