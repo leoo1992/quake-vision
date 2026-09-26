@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import maplibregl from 'maplibre-gl';
 import type { ThemePreference } from '@/components/experience-provider';
 import type {
   EarthquakeEvent,
@@ -92,6 +93,7 @@ export function SeismicMap({
 }: SeismicMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('maplibre-gl').Map | null>(null);
+  const epicenterMarkersRef = useRef<maplibregl.Marker[]>([]);
   const onSelectRef = useRef(onSelect);
   const initialThemeRef = useRef(theme);
   const [mapReady, setMapReady] = useState(false);
@@ -531,6 +533,47 @@ export function SeismicMap({
 
     map.triggerRepaint();
   }, [mapReady, theme]);
+
+  useEffect(() => {
+    if (!mapReady) return;
+
+    const map = mapRef.current;
+    if (!map) return;
+
+    epicenterMarkersRef.current.forEach((marker) => marker.remove());
+    epicenterMarkersRef.current = [];
+
+    const markers = events.map((event) => {
+      const element = document.createElement('button');
+      element.type = 'button';
+      element.className = 'epicenter-pin';
+      element.title = `M${event.magnitude.toFixed(1)} · ${event.place}`;
+      element.setAttribute('aria-label', `Epicentro M${event.magnitude.toFixed(1)}: ${event.place}`);
+      element.style.setProperty('--epicenter-color', getMagnitudeColor(event.magnitude));
+      element.dataset.selected = event.id === selectedId ? 'true' : 'false';
+      element.addEventListener('click', (clickEvent) => {
+        clickEvent.stopPropagation();
+        onSelectRef.current(event.id);
+      });
+
+      return new maplibregl.Marker({
+        element,
+        anchor: 'bottom',
+      })
+        .setLngLat([event.longitude, event.latitude])
+        .addTo(map);
+    });
+
+    epicenterMarkersRef.current = markers;
+    map.triggerRepaint();
+
+    return () => {
+      markers.forEach((marker) => marker.remove());
+      if (epicenterMarkersRef.current === markers) {
+        epicenterMarkersRef.current = [];
+      }
+    };
+  }, [events, mapReady, selectedId]);
 
   useEffect(() => {
     if (!mapReady) return;
