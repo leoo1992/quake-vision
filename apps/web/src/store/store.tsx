@@ -23,7 +23,7 @@ export interface TimeBucketFilter {
 interface QuakeUiState {
   range: TimeRange;
   minMagnitude: number;
-  maxDepth: number;
+  minDepth: number;
   mapMode: MapMode;
   selectedId: string | null;
   search: string;
@@ -34,7 +34,7 @@ interface QuakeUiState {
 const initialState: QuakeUiState = {
   range: 'day',
   minMagnitude: 2.5,
-  maxDepth: 700,
+  minDepth: 0,
   mapMode: 'points',
   selectedId: null,
   search: '',
@@ -55,8 +55,8 @@ const quakeSlice = createSlice({
       state.minMagnitude = action.payload;
       state.selectedId = null;
     },
-    setMaxDepth(state, action: PayloadAction<number>) {
-      state.maxDepth = action.payload;
+    setMinDepth(state, action: PayloadAction<number>) {
+      state.minDepth = action.payload;
       state.selectedId = null;
     },
     setMapMode(state, action: PayloadAction<MapMode>) {
@@ -92,7 +92,7 @@ const quakeSlice = createSlice({
 export const {
   selectEarthquake,
   setMapMode,
-  setMaxDepth,
+  setMinDepth,
   setMinMagnitude,
   setRange,
   setSearch,
