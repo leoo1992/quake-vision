@@ -546,7 +546,7 @@ export function SeismicMap({
     epicenterMarkersRef.current.forEach((marker) => marker.remove());
     epicenterMarkersRef.current = [];
 
-    const markers = events.map((event) => {
+    const markers = mode === 'points' ? events.map((event) => {
       const element = document.createElement('button');
       element.type = 'button';
       element.className = 'epicenter-pin';
@@ -565,7 +565,7 @@ export function SeismicMap({
       })
         .setLngLat([event.longitude, event.latitude])
         .addTo(map);
-    });
+    }) : [];
 
     epicenterMarkersRef.current = markers;
     map.triggerRepaint();
@@ -576,7 +576,7 @@ export function SeismicMap({
         epicenterMarkersRef.current = [];
       }
     };
-  }, [events, mapReady, selectedId]);
+  }, [events, mapReady, selectedId, mode]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -658,34 +658,39 @@ export function SeismicMap({
       clusterVisibility,
     );
 
-    // Exact USGS epicenters remain visible in both visualization modes.
-    map.setLayoutProperty('quake-points', 'visibility', 'visible');
-    map.setLayoutProperty('quake-glow', 'visibility', 'visible');
+    const pointVisibility = mode === 'points' ? 'visible' : 'none';
+    const heatVisibility = mode === 'heat' ? 'visible' : 'none';
+
+    // The selector switches between two genuinely different visualizations.
+    map.setLayoutProperty('quake-points', 'visibility', pointVisibility);
+    map.setLayoutProperty('quake-glow', 'visibility', pointVisibility);
     map.setLayoutProperty(
       'quake-epicenter-center',
       'visibility',
-      'visible',
+      pointVisibility,
     );
-    map.setLayoutProperty('quake-hit', 'visibility', 'visible');
+    map.setLayoutProperty('quake-hit', 'visibility', pointVisibility);
 
-    // Keep a colored seismic-density layer below the pins in both modes.
-    map.setLayoutProperty('quake-heat', 'visibility', 'visible');
-    map.setPaintProperty(
-      'quake-heat',
-      'heatmap-opacity',
-      mode === 'heat' ? 0.9 : 0.34,
-    );
-
-    map.setPaintProperty(
-      'quake-points',
-      'circle-opacity',
-      mode === 'heat' ? 0.78 : 1,
-    );
-    map.setPaintProperty(
-      'quake-glow',
-      'circle-opacity',
-      mode === 'heat' ? 0.18 : 0.32,
-    );
+    map.setLayoutProperty('quake-heat', 'visibility', heatVisibility);
+    map.setPaintProperty('quake-heat', 'heatmap-opacity', 0.92);
+    map.setPaintProperty('quake-heat', 'heatmap-intensity', [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      1.35,
+      7,
+      2.6,
+    ]);
+    map.setPaintProperty('quake-heat', 'heatmap-radius', [
+      'interpolate',
+      ['linear'],
+      ['zoom'],
+      0,
+      18,
+      7,
+      58,
+    ]);
 
     map.triggerRepaint();
   }, [mapReady, mode]);
