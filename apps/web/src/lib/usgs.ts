@@ -9,11 +9,11 @@ import {
 export async function loadEarthquakes({
   range,
   minMagnitude,
-  maxDepth,
+  minDepth,
 }: {
   range: TimeRange;
   minMagnitude: number;
-  maxDepth: number;
+  minDepth: number;
 }): Promise<EarthquakeDataset> {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '');
 
@@ -21,7 +21,7 @@ export async function loadEarthquakes({
     const params = new URLSearchParams({
       range,
       minMagnitude: String(minMagnitude),
-      maxDepth: String(maxDepth),
+      minDepth: String(minDepth),
     });
 
     const response = await fetch(
@@ -34,7 +34,7 @@ export async function loadEarthquakes({
   }
 
   const response = await fetch(
-    buildUsgsQuery({ range, minMagnitude, maxDepth }),
+    buildUsgsQuery({ range, minMagnitude, minDepth }),
     {
       headers: {
         Accept: 'application/geo+json, application/json',
