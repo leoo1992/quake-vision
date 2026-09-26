@@ -130,12 +130,12 @@ export function normalizeDataset(
 export function buildUsgsQuery({
   range,
   minMagnitude,
-  maxDepth,
+  minDepth,
   now = Date.now(),
 }: {
   range: TimeRange;
   minMagnitude: number;
-  maxDepth: number;
+  minDepth: number;
   now?: number;
 }) {
   const params = new URLSearchParams({
@@ -143,7 +143,7 @@ export function buildUsgsQuery({
     starttime: new Date(now - RANGE_MS[range]).toISOString(),
     endtime: new Date(now).toISOString(),
     minmagnitude: String(minMagnitude),
-    maxdepth: String(maxDepth),
+    mindepth: String(minDepth),
     orderby: 'time',
     eventtype: 'earthquake',
     limit: '2000',
