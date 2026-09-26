@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import maplibregl from 'maplibre-gl';
 import type { ThemePreference } from '@/components/experience-provider';
 import type {
   EarthquakeEvent,
@@ -93,7 +92,8 @@ export function SeismicMap({
 }: SeismicMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<import('maplibre-gl').Map | null>(null);
-  const epicenterMarkersRef = useRef<maplibregl.Marker[]>([]);
+  const epicenterMarkersRef = useRef<import('maplibre-gl').Marker[]>([]);
+  const markerConstructorRef = useRef<typeof import('maplibre-gl').Marker | null>(null);
   const onSelectRef = useRef(onSelect);
   const initialThemeRef = useRef(theme);
   const [mapReady, setMapReady] = useState(false);
@@ -121,6 +121,8 @@ export function SeismicMap({
 
     void import('maplibre-gl').then((maplibregl) => {
       if (disposed || !containerRef.current) return;
+
+      markerConstructorRef.current = maplibregl.Marker;
 
       const map = new maplibregl.Map({
         container: containerRef.current,
@@ -538,7 +540,8 @@ export function SeismicMap({
     if (!mapReady) return;
 
     const map = mapRef.current;
-    if (!map) return;
+    const Marker = markerConstructorRef.current;
+    if (!map || !Marker) return;
 
     epicenterMarkersRef.current.forEach((marker) => marker.remove());
     epicenterMarkersRef.current = [];
@@ -556,7 +559,7 @@ export function SeismicMap({
         onSelectRef.current(event.id);
       });
 
-      return new maplibregl.Marker({
+      return new Marker({
         element,
         anchor: 'bottom',
       })
