@@ -546,7 +546,25 @@ export function SeismicMap({
     epicenterMarkersRef.current.forEach((marker) => marker.remove());
     epicenterMarkersRef.current = [];
 
-    const markers = mode === 'points' ? events.map((event) => {
+    const markers = events.map((event) => {
+      if (mode === 'heat') {
+        const element = document.createElement('div');
+        element.className = 'seismic-heat-spot';
+        element.setAttribute('aria-hidden', 'true');
+        const strength = Math.max(0, Math.min(1, event.magnitude / 7));
+        const size = 64 + strength * 92;
+        element.style.width = `${size}px`;
+        element.style.height = `${size}px`;
+        element.style.opacity = String(0.58 + strength * 0.3);
+
+        return new Marker({
+          element,
+          anchor: 'center',
+        })
+          .setLngLat([event.longitude, event.latitude])
+          .addTo(map);
+      }
+
       const element = document.createElement('button');
       element.type = 'button';
       element.className = 'epicenter-pin';
@@ -565,7 +583,7 @@ export function SeismicMap({
       })
         .setLngLat([event.longitude, event.latitude])
         .addTo(map);
-    }) : [];
+    });
 
     epicenterMarkersRef.current = markers;
     map.triggerRepaint();
