@@ -69,13 +69,13 @@ describe('earthquake utilities', () => {
     const url = buildUsgsQuery({
       range: 'day',
       minMagnitude: 2.5,
-      maxDepth: 300,
+      minDepth: 10,
       now: Date.UTC(2026, 8, 25, 12),
     });
 
     expect(url).toContain('format=geojson');
     expect(url).toContain('minmagnitude=2.5');
-    expect(url).toContain('maxdepth=300');
+    expect(url).toContain('mindepth=10');
     expect(url).toContain('eventtype=earthquake');
   });
 
