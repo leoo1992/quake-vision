@@ -1,5 +1,7 @@
 # QuakeVision
 
+[English version](README.en.md)
+
 QuakeVision é um centro visual de monitoramento sísmico que transforma dados reais do **USGS Earthquake Catalog** em um mapa global interativo, filtros, métricas e análises temporais.
 
 ## Stack
